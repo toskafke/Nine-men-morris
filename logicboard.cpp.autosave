@@ -1,0 +1,129 @@
+#include "logicboard.h"
+
+
+LogicBoard::LogicBoard()
+{
+    inicializeBoard();
+    turn_counter = 0;
+    turn = PLAYER1_ID;
+    first_player_pieces = 9;
+    second_player_pieces = 9;
+    mill_just_formed=false;
+}
+
+void LogicBoard::incrementTurn()
+{
+    if (turn == PLAYER1_ID)
+        turn = PLAYER2_ID;
+    else {
+        turn = PLAYER1_ID;
+    }
+    turn_counter++;
+}
+
+bool LogicBoard::millFormed(int turn, int pos)
+{
+    bool mill_formed=false;
+    for(auto it=possibleMillPositions.begin(); it != possibleMillPositions.end() && !mill_formed; it++)
+    {
+        int pos1=(*it)[0];
+        int pos2=(*it)[1];
+        int pos3=(*it)[2];
+        if(pos1 == turn && pos2 == turn && pos3 == turn)
+        {
+            if(pos1 == pos || pos2 == pos || pos3 == pos)
+            {
+                mill_formed=true;
+                mill_just_formed=true;
+            }
+        }
+            
+    }
+    return mill_formed;
+}
+
+int LogicBoard::getPlayerTurn()
+{
+    return this->turn;
+}
+
+int LogicBoard::getOpponentTurn()
+{
+    if(turn == PLAYER1_ID)
+        return PLAYER2_ID;
+    else {
+        return PLAYER1_ID;
+    }
+}
+
+int LogicBoard::getPiecesLeft(int turn)
+{
+    if(turn == PLAYER1_ID)
+        return this->first_player_pieces;
+    else {
+        return this->second_player_pieces;
+    }
+}
+
+bool LogicBoard::checkPosition(int pos)
+{
+    if(board[pos] != 0)
+        return false;
+
+    return true;
+    
+}
+
+bool LogicBoard::checkPositionToRemove(int pos)
+{
+    if(board[pos] == getOpponentTurn())
+        return true;
+    return false;
+}
+
+void LogicBoard::addPiece(int pos)
+{
+    board[pos] = turn;
+    if(turn == PLAYER1_ID)
+        first_player_pieces--;
+    else {
+        second_player_pieces--;
+    }
+    
+}
+
+bool LogicBoard::removePiece(int pos)
+{
+    board[pos] = 0;
+}
+
+int LogicBoard::getGamePhase()
+{
+    return this->game_phase;
+}
+
+int LogicBoard::getTurnCounter()
+{
+    return this->turn_counter;
+}
+
+bool LogicBoard::getMillJustFormed()
+{
+    return this->mill_just_formed;
+}
+
+void LogicBoard::setGamePhase(int game_phase)
+{
+    this->game_phase=game_phase;
+}
+
+
+
+void LogicBoard::inicializeBoard()
+{
+    board = new int[24];
+    for(int i=0;i<24;i++)
+    {
+        board[i] = 0;
+    }
+}
