@@ -4,9 +4,8 @@
 #include <QSignalMapper>
 #include <unistd.h>
 
-GraphicBoard::GraphicBoard(QWidget *parent) : QWidget(parent)
+GraphicBoard::GraphicBoard(QWidget *parent) : QWidget(parent), timeElapsed(0), moveFrom(-1)
 {
-    moveFrom = -1;
     signalMapper = new QSignalMapper(this);
 
     connect(signalMapper, SIGNAL(mapped(int)), this, SLOT(pointSelected(int)));
@@ -27,6 +26,9 @@ GraphicBoard::GraphicBoard(QWidget *parent) : QWidget(parent)
     boardLayout = new QGridLayout();
     statusLayout = new QGridLayout();
 
+    timer = new QTimer();
+    connect(timer, SIGNAL(timeout()), this, SLOT(timeHandler()));
+
     // Set up the status layout
     // Displays: status message, current turn, current game phase rules, reset button
 
@@ -42,67 +44,83 @@ GraphicBoard::GraphicBoard(QWidget *parent) : QWidget(parent)
     firstPlayerSelect->addItem(tr("Computer"));
     statusLayout->addWidget(firstPlayerSelect, 0, 1);
 
-    secondPlayerSelectTextLabel = new QLabel(tr("Player 2:"));
-    secondPlayerSelectTextLabel->setObjectName("boldLabel");
-    statusLayout->addWidget(secondPlayerSelectTextLabel, 1, 0);
-    secondPlayerSelect = new QComboBox();
-    secondPlayerSelect->addItem(tr("Human"));
-    secondPlayerSelect->addItem(tr("Computer"));
-    statusLayout->addWidget(secondPlayerSelect, 1, 1);
-
     heuristicSelectTextLabel = new QLabel(tr("Heuristic:"));
     heuristicSelectTextLabel->setObjectName("boldLabel");
-    statusLayout->addWidget(heuristicSelectTextLabel, 2, 0);
+    statusLayout->addWidget(heuristicSelectTextLabel, 1, 0);
     heuristicSelect = new QComboBox();
     heuristicSelect->addItem(tr("Simple"));
     heuristicSelect->addItem(tr("Medium"));
     heuristicSelect->addItem(tr("Complex"));
-    statusLayout->addWidget(heuristicSelect, 2, 1);
+    statusLayout->addWidget(heuristicSelect, 1, 1);
 
     algorithmSelectTextLabel = new QLabel(tr("Algorithm:"));
     algorithmSelectTextLabel->setObjectName("boldLabel");
-    statusLayout->addWidget(algorithmSelectTextLabel, 3, 0);
+    statusLayout->addWidget(algorithmSelectTextLabel, 2, 0);
     algorithmSelect = new QComboBox();
     algorithmSelect->addItem(tr("MiniMax"));
     algorithmSelect->addItem(tr("AlphaBeta"));
-    statusLayout->addWidget(algorithmSelect, 3, 1);
+    statusLayout->addWidget(algorithmSelect, 2, 1);
+
+    secondPlayerSelectTextLabel = new QLabel(tr("Player 2:"));
+    secondPlayerSelectTextLabel->setObjectName("boldLabel");
+    statusLayout->addWidget(secondPlayerSelectTextLabel, 3, 0);
+    secondPlayerSelect = new QComboBox();
+    secondPlayerSelect->addItem(tr("Human"));
+    secondPlayerSelect->addItem(tr("Computer"));
+    statusLayout->addWidget(secondPlayerSelect, 3, 1);
+
+    heuristicSelectTextLabel2 = new QLabel(tr("Heuristic:"));
+    heuristicSelectTextLabel2->setObjectName("boldLabel");
+    statusLayout->addWidget(heuristicSelectTextLabel2, 4, 0);
+    heuristicSelect2 = new QComboBox();
+    heuristicSelect2->addItem(tr("Simple"));
+    heuristicSelect2->addItem(tr("Medium"));
+    heuristicSelect2->addItem(tr("Complex"));
+    statusLayout->addWidget(heuristicSelect2, 4, 1);
+
+    algorithmSelectTextLabel2 = new QLabel(tr("Algorithm:"));
+    algorithmSelectTextLabel2->setObjectName("boldLabel");
+    statusLayout->addWidget(algorithmSelectTextLabel2, 5, 0);
+    algorithmSelect2 = new QComboBox();
+    algorithmSelect2->addItem(tr("MiniMax"));
+    algorithmSelect2->addItem(tr("AlphaBeta"));
+    statusLayout->addWidget(algorithmSelect2, 5, 1);
+
 
     startButton = new QPushButton(tr("Start game"));
     connect(startButton, SIGNAL(clicked()), SLOT(startGame()));
-    statusLayout->addWidget(startButton, 4, 0);
+    statusLayout->addWidget(startButton, 7, 0);
 
     resetButton = new QPushButton(tr("Restart game"));
     //    connect(resetButton, SIGNAL(clicked()), SLOT(resetGame()));
-    statusLayout->addWidget(resetButton, 4, 1);
+    statusLayout->addWidget(resetButton, 7, 1);
 
     turnTextLabel = new QLabel(tr("Current turn:"));
     turnTextLabel->setObjectName("boldLabel");
-    statusLayout->addWidget(turnTextLabel, 5, 0);
+    statusLayout->addWidget(turnTextLabel, 9, 0);
     turnLabel = new QLabel(QString::number(0));
-    statusLayout->addWidget(turnLabel, 5, 1);
+    statusLayout->addWidget(turnLabel, 9, 1);
+
+    timeElapsedTextLabel = new QLabel(tr("Current time:"));
+    timeElapsedTextLabel->setObjectName("boldLabel");
+    statusLayout->addWidget(timeElapsedTextLabel, 10, 0);
+    mTimeElapsed = new QLabel();
+    statusLayout->addWidget(mTimeElapsed, 10, 1);
 
     statusTextLabel = new QLabel(tr("Status messages:"));
     statusTextLabel->setObjectName("boldLabel");
-    statusLayout->addWidget(statusTextLabel, 6, 0, 1, 2);
+    statusLayout->addWidget(statusTextLabel, 12, 0, 1, 2);
 
     statusList = new QListWidget;
     statusList->setWordWrap(true);
     statusList->addItem(tr("A new game has started."));
-    statusLayout->addWidget(statusList, 7, 0, 1, 2);
+    statusLayout->addWidget(statusList, 13, 0, 1, 2);
 
     spacerItem1 = new QSpacerItem(400, 100);
-    statusLayout->addItem(spacerItem1, 8, 0, 1, 2);
-
-    gameRulesTextLabel = new QLabel(tr("How to play:"));
-    gameRulesTextLabel->setObjectName("boldLabel");
-    statusLayout->addWidget(gameRulesTextLabel, 9, 0, 1, 2);
-
-    gameRulesLabel = new QLabel(tr(gameRules[0]));
-    gameRulesLabel->setWordWrap(true);
-    statusLayout->addWidget(gameRulesLabel, 10, 0, 1, 2);
+    statusLayout->addItem(spacerItem1, 14, 0, 1, 2);
 
     spacerItem2 = new QSpacerItem(400, 75);
-    statusLayout->addItem(spacerItem2, 11, 0, 1, 2);
+    statusLayout->addItem(spacerItem2, 12, 0, 1, 2);
 
     // Setup the board layout
     boardLayout->setSpacing(0);
@@ -281,6 +299,12 @@ GraphicBoard::GraphicBoard(QWidget *parent) : QWidget(parent)
     setLayout(mainLayout);
 }
 
+void GraphicBoard::timeHandler()
+{
+    timeElapsed++;
+    mTimeElapsed->setText(QString::number(timeElapsed/10));
+}
+
 void GraphicBoard::incTurn() {
     logic_board->incrementTurn();
 }
@@ -328,15 +352,25 @@ void GraphicBoard::setMoveHoverStylesheet()
 void GraphicBoard::setRemoveHoverStylesheet()
 {
     // The player is selecting one of the opposing player's pieces to remove
-    qApp->setStyleSheet("QLabel#boldLabel { font-weight: bold; } QPushButton#empty { border: 0px; background-image: url(:/images/empty.png); } QPushButton#player1 { border: 0px; background-image: url(:/images/blue_stone.png); } QPushButton#player2 { border: 0px; background-image: url(:/images/red_stone.png); } QPushButton#player2:hover { border: 0px; background-image: url(:/images/red_stone_selected.png); }");
+    qApp->setStyleSheet("QLabel#boldLabel { font-weight: bold; } "
+                        "QPushButton#empty { border: 0px; background-image: url(:/images/empty.png); } "
+                        "QPushButton#player1 { border: 0px; background-image: url(:/images/blue_stone.png); } "
+                        "QPushButton#player2 { border: 0px; background-image: url(:/images/red_stone.png); } "
+                        "QPushButton#player2:hover { border: 0px; background-image: url(:/images/red_stone_selected.png); }");
 }
 
 void GraphicBoard::startGame()
 {
-    std::string heuristic_type = heuristicSelect->currentText().toStdString();
+    std::array<std::string, 2> heuristic_arr;
+    heuristic_arr[0] = heuristicSelect->currentText().toStdString();
+    heuristic_arr[1] = heuristicSelect2->currentText().toStdString();
     heuristicSelect->setEnabled(false);
-    std::string algorithm_type = algorithmSelect->currentText().toStdString();
+    heuristicSelect2->setEnabled(false);
+    std::array<std::string, 2>algorithm_arr;
+    algorithm_arr[0] = algorithmSelect->currentText().toStdString();
+    algorithm_arr[1] = algorithmSelect2->currentText().toStdString();
     algorithmSelect->setEnabled(false);
+    algorithmSelect2->setEnabled(false);
     std::string player1_type = firstPlayerSelect->currentText().toStdString();
     std::string player2_type = secondPlayerSelect->currentText().toStdString();
     firstPlayerSelect->setEnabled(false);
@@ -350,17 +384,20 @@ void GraphicBoard::startGame()
         {
             auto sp_logic_board = logic_board;
             dynamic_cast<AIPlayer*>(players->at(i))->setLogicBoard(sp_logic_board);
-            dynamic_cast<AIPlayer*>(players->at(i))->setHeuristic(heuristic_type);
-            dynamic_cast<AIPlayer*>(players->at(i))->setAlgorithm(algorithm_type);
+            dynamic_cast<AIPlayer*>(players->at(i))->setHeuristic(heuristic_arr[i]);
+            dynamic_cast<AIPlayer*>(players->at(i))->setAlgorithm(algorithm_arr[i]);
         }
     }
-
-    // Disable all buttons
     for(int i = 0; i < 24; i++)
     {
         buttons[i]->setEnabled(true);
     }
     startButton->setEnabled(false);
+
+    timer->start(100);
+
+    if(player1_type == "Computer" && player2_type == "Computer")
+        pointSelected(0);
 }
 
 /*!
@@ -405,9 +442,7 @@ void GraphicBoard::addPiece(const int &pos, int &game_phase)
             logic_board->incrementTurn();
         }
     }
-
-    //checking if first game phase has ended
-    if(logic_board->getPiecesLeft(PLAYER2_ID) == 0 && logic_board->getPiecesLeft(PLAYER1_ID) == 0)
+    if(logic_board->firstPhaseHasEnded())
     {
         setMoveHoverStylesheet();
         logic_board->setGamePhase(game_phase+1);
@@ -525,11 +560,13 @@ void GraphicBoard::movePieceOnBoard(int &moveFrom, const int &pos)
     buttons[moveFrom]->setObjectName("empty");
     buttons[pos]->setObjectName("player"+QString::number(turn));
     buttons[moveFrom]->setStyle(qApp->style());
+    buttons[pos]->setStyle(qApp->style());
     buttons[moveFrom]->repaint();
     buttons[pos]->repaint();
 
     // Update status message
     updateStatusLabel(tr("Player %1 has moved a piece.").arg(turn));
+
 }
 
 void GraphicBoard::pointSelected(int pos)
@@ -540,6 +577,7 @@ void GraphicBoard::pointSelected(int pos)
     bool mill_just_formed = logic_board->getMillJustFormed();
     if(player_type == Human)
     {
+
         if(mill_just_formed)
         {
             if(logic_board->checkPositionToRemove(pos))
@@ -571,41 +609,22 @@ void GraphicBoard::pointSelected(int pos)
                 break;
             }
         }
+        updateTurnLabel(logic_board->getTurnCounter());
     }
     //player is computer
-    while(logic_board->getActualPlayerType() == Computer)
+    if(logic_board->getActualPlayerType() == Computer)
     {
+        game_phase=logic_board->getGamePhase();
         switch(game_phase){
         //not all pawn on the board
         case 0:
         {
-            int *board = logic_board->getBoard();
-            std::string str_board = "";
-            for(int i=0;i<24;i++)
-            {
-                str_board += std::to_string(board[i]);
-                str_board += ", ";
-            }
-            QString qstr = QString::fromStdString(str_board);
-            updateStatusLabel(tr("Board before adding: %1")
-                              .arg(qstr));
-
             int moveTo = logic_board->getBestAdd();
             updateStatusLabel(tr(" %1 has placed a piece on %2 position.")
                               .arg("Computer").arg(moveTo));
 
             addPieceOnBoard(moveTo);
             logic_board->addPiece(moveTo);
-            board = logic_board->getBoard();
-            str_board = "";
-            for(int i=0;i<24;i++)
-            {
-                str_board += std::to_string(board[i]);
-                str_board += ", ";
-            }
-            qstr = QString::fromStdString(str_board);
-            updateStatusLabel(tr("Board after adding: %1")
-                              .arg(qstr));
 
             //checking if player formed a mill
             if(logic_board->millFormed(moveTo))
@@ -619,7 +638,7 @@ void GraphicBoard::pointSelected(int pos)
             logic_board->incrementTurn();
 
             //  checking if first game phase has ended
-            if(logic_board->getPiecesLeft(PLAYER2_ID) == 0 && logic_board->getPiecesLeft(PLAYER1_ID) == 0)
+            if(logic_board->firstPhaseHasEnded())
             {
                 setMoveHoverStylesheet();
                 logic_board->setGamePhase(game_phase+1);
@@ -632,9 +651,10 @@ void GraphicBoard::pointSelected(int pos)
             std::pair<int, int> result = logic_board->getBestMove();
             int move_from = result.first;
             int move_to = result.second;
+
             movePieceOnBoard(move_from, move_to);
             logic_board->movePiece(move_from, move_to);
-            move_from=-1;
+
             //checking if player formed a mill
             if(logic_board->millFormed(move_to))
             {
@@ -656,6 +676,11 @@ void GraphicBoard::pointSelected(int pos)
             break;
         }
         }
+        updateTurnLabel(logic_board->getTurnCounter());
+        timeHandler();
+        // next turn
+        if(logic_board->getActualPlayerType() == Computer)
+              pointSelected(0);
     }
 }
 
@@ -667,13 +692,13 @@ void GraphicBoard::endGame(const int &losing_player_id)
     case PLAYER1_ID:
         // player 1 has won
     {
-        updateStatusLabel(tr("Player 1 have won the game! Congratulations!"));
+        updateStatusLabel(tr("Player 2 have won the game! Congratulations!"));
 
     } break;
     case PLAYER2_ID:
         // player 2 has won
     {
-        updateStatusLabel(tr("Player2 has won the game! Congrats."));
+        updateStatusLabel(tr("Player 1 has won the game! Congrats."));
 
     } break;
     }
@@ -685,9 +710,14 @@ void GraphicBoard::endGame(const int &losing_player_id)
     }
     firstPlayerSelect->setEnabled(true);
     secondPlayerSelect->setEnabled(true);
+    algorithmSelect->setEnabled(true);
+    algorithmSelect2->setEnabled(true);
+    heuristicSelect->setEnabled(true);
+    heuristicSelect2->setEnabled(true);
     startButton->setEnabled(true);
+    setPlaceHoverStylesheet();
 
-    //todo logic_board->endGame()
+    logic_board->endGame();
 }
 void GraphicBoard::resetGame()
 {

@@ -1,8 +1,16 @@
 #include "player.h"
 
-Player::Player()
+Player::Player ()
 {
     captured_pawns_count=0;
+    pieces_to_put = 9;
+}
+
+Player::~Player()
+{
+    pawns_on_board.clear();
+    pawns_in_mill.clear();
+    adjacency_matrix.clear();
 }
 
 void Player::putPawn(int pos)
@@ -55,6 +63,16 @@ void Player::incCapturedPawns()
 void Player::decCapturedPawns()
 {
     captured_pawns_count--;
+}
+
+void Player::incPiecesLeftToPut()
+{
+    pieces_to_put++;
+}
+
+void Player::decPiecesLeftToPut()
+{
+    pieces_to_put--;
 }
 
 int &Player::getCapturedPawnsCount()
@@ -141,4 +159,9 @@ int Player::getCloseMill(int *board)
     //we divide because we get twice as much close_mill as we have, one close mill,
     //so two next ot each other gives as two points
     return close_mill/2;
+}
+
+int Player::getPiecesLeftToPut()
+{
+    return pieces_to_put;
 }

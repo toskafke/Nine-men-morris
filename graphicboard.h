@@ -16,6 +16,7 @@
 #include <QObject>
 #include <QPushButton>
 #include <QSignalMapper>
+#include <QTimer>
 #include <QWidget>
 
 #define PLAYER1_ID 1
@@ -39,6 +40,11 @@ private:
 
     std::shared_ptr<LogicBoard>logic_board;
 
+    int timeElapsed;
+    QLabel *mTimeElapsed;
+    QLabel *timeElapsedTextLabel;
+    QTimer *timer;
+
 
     QPushButton * resetButton;
     QPushButton * startButton;
@@ -54,12 +60,16 @@ private:
     QComboBox *secondPlayerSelect;
     QComboBox *heuristicSelect;
     QComboBox *algorithmSelect;
+    QComboBox *heuristicSelect2;
+    QComboBox *algorithmSelect2;
 
     QLabel * turnTextLabel;
     QLabel * firstPlayerSelectTextLabel;
     QLabel * secondPlayerSelectTextLabel;
     QLabel * heuristicSelectTextLabel;
     QLabel * algorithmSelectTextLabel;
+    QLabel * heuristicSelectTextLabel2;
+    QLabel * algorithmSelectTextLabel2;
     QLabel * statusTextLabel;
     QLabel * gameRulesTextLabel;
 
@@ -78,6 +88,7 @@ private:
     };
 
 public slots:
+    void timeHandler();
     void incTurn();
     /*!
       *  This method is connected to the intersecting points on the game board (the points where game pieces can be placed)

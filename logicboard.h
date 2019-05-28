@@ -23,7 +23,7 @@ class LogicBoard
 {
 public:
     LogicBoard();
-
+    ~LogicBoard();
     void incrementTurn();
 
     //gameplay methods
@@ -37,6 +37,7 @@ public:
     bool removePiece(int pos, int player_id, int opponent_id);
     bool undoRemovePiece(int pos, int player_id, int opponent_id);
     void addPlayer(Player *&player);
+    void endGame();
 
     // checking bool methods
     bool millIsBroken(int &move_from, int &pos);
@@ -50,17 +51,15 @@ public:
     bool checkIsInPlayerPawns(int pos);
     bool hasSecondPhaseEnded();
     bool hasLegalMove(Player *player);
-    bool checkMillBroken();
     int gameHasEnded();
+    bool firstPhaseHasEnded();
 
     // AI methods
     int getBestAdd();
     std::pair<int, int> getBestMove();
 
-
     //getters, setters
-    std::vector<std::vector<int>> &getAdjacencyMatrix();
-    int *&getBoard();
+
     int getPlayerTurn();
     int getOpponentTurn();
     int getPiecesLeft(int turn);
@@ -69,14 +68,13 @@ public:
     int getTurnCounter();
     void setMillJustFormed(bool formed);
     bool getMillJustFormed();
-    void fillAdjacencyMatrix();
-    void displayAdjacencyMatrix();
+
+
     int getPlayerPawnsCount();
     std::vector<Player*> *&getPlayers();
     std::map<int,std::vector<int>> getLegalMoves(int player_id);
     std::vector<int> getLegalAdd();
     void setPlayer(std::string type, int player_id);
-    PlayerType &getCurrentPlayerType();
     std::vector<int> getLegalPawnMoves(int player_id, int &pos);
     PlayerType getActualPlayerType();
 
@@ -87,21 +85,22 @@ private:
     int game_phase;
     int turn_counter;
     int *board;
-    int first_player_pieces;
-    int second_player_pieces;
-    bool new_mill;
     bool mill_just_formed;
-    std::vector<int> &getFieldNeighbours(int pos);
+    std::vector<std::vector<int>> adjacency_matrix;
 
     std::vector<Player*> *players;
     //Board contains information about pawns on the board.
     // 0 - field is empty
-    // 1 - player1 occcupies the field
-    // 2 - player2 occupies the field
+    // 1 - player1 occcupies the field, player_id = 1
+    // 2 - player2 occupies the field, player_id = 2
     //Field are flatten into 1d array
 
+    std::vector<int> &getFieldNeighbours(int pos);
+    std::vector<std::vector<int>> &getAdjacencyMatrix();
     void updateTurnLabel(int turn);
     void inicializeBoard();
+    void fillAdjacencyMatrix();
+    void displayAdjacencyMatrix();
 
     std::array<std::array<int, 3>, 16> possibleMillPositions = {{
                                                                     {{0,1,2}},
@@ -121,8 +120,6 @@ private:
                                                                     {{18,19,20}},
                                                                     {{21,22,23}}
                                                                 }};
-    std::vector<std::vector<int>> adjacency_matrix;
-
 
 
 };

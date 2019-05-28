@@ -7,12 +7,20 @@ LogicBoard::LogicBoard()
     turn_counter = 0;
     turn = PLAYER1_ID;
     game_phase=0;
-    first_player_pieces = 9;
-    second_player_pieces = 9;
     mill_just_formed=false;
     players = new std::vector<Player*>();
     players->reserve(2);
     fillAdjacencyMatrix();
+}
+
+LogicBoard::~LogicBoard()
+{
+    delete board;
+    for(int i=0;i<players->size();i++)
+    {
+        delete players->at(i);
+    }
+    delete players;
 }
 
 void LogicBoard::incrementTurn()
@@ -28,16 +36,8 @@ void LogicBoard::incrementTurn()
 void LogicBoard::addPiece(int pos)
 {
     board[pos] = turn;
-    if(turn == PLAYER1_ID)
-    {
-        first_player_pieces--;
-        players->at(0)->putPawn(pos);
-    }
-    else {
-        second_player_pieces--;
-        players->at(1)->putPawn(pos);
-    }
-
+    players->at(turn-1)->putPawn(pos);
+    players->at(turn-1)->decPiecesLeftToPut();
 }
 
 
@@ -77,7 +77,6 @@ bool LogicBoard::millFormedNoAction(int turn, int pos)
             if(pos1 == pos || pos2 == pos || pos3 == pos)
             {
                 mill_formed=true;
-                //                mill_just_formed=true;
                 players->at(turn-1)->addPawnsToMill(pos1, pos2, pos3);
 
             }
@@ -103,12 +102,10 @@ int LogicBoard::getOpponentTurn()
 
 int LogicBoard::getPiecesLeft(int turn)
 {
-    if(turn == PLAYER1_ID)
-        return this->first_player_pieces;
-    else {
-        return this->second_player_pieces;
-    }
+    return players->at(turn-1)->getPiecesLeftToPut();
 }
+
+
 
 bool LogicBoard::checkPosition(int pos)
 {
@@ -129,30 +126,15 @@ bool LogicBoard::checkPositionToRemove(int pos)
 void LogicBoard::addPiece(int pos, int player_turn)
 {
     board[pos] = player_turn;
-    if(player_turn == PLAYER1_ID)
-    {
-        first_player_pieces--;
-        players->at(0)->putPawn(pos);
-    }
-    else {
-        second_player_pieces--;
-        players->at(1)->putPawn(pos);
-    }
-
+    players->at(player_turn-1)->putPawn(pos);
+    players->at(player_turn-1)->decPiecesLeftToPut();
 }
 
 bool LogicBoard::undoAdd(int moveTo, int player_id)
 {
     board[moveTo] = 0;
-    if(player_id == PLAYER1_ID)
-    {
-        first_player_pieces++;
-        players->at(0)->removePawn(moveTo);
-    }
-    else {
-        second_player_pieces++;
-        players->at(1)->removePawn(moveTo);
-    }
+    players->at(player_id-1)->removePawn(moveTo);
+    players->at(player_id-1)->incPiecesLeftToPut();
     if(players->at(player_id-1)->isInMill(moveTo))
     {
         players->at(player_id-1)->removeFromMill(moveTo);
@@ -187,6 +169,18 @@ bool LogicBoard::undoRemovePiece(int pos, int player_id, int opponent_id)
 void LogicBoard::addPlayer(Player *&player)
 {
     players->push_back(player);
+}
+
+void LogicBoard::endGame()
+{
+    for(int i=0;i<players->size();i++)
+        delete players->at(i);
+    for(int i=0;i<BOARD_SIZE;i++)
+        board[i] = 0;
+    turn = 0;
+    turn_counter = 0;
+    game_phase = 0;
+    mill_just_formed = false;
 }
 
 bool LogicBoard::millIsBroken(int &move_from, int &pos)
@@ -323,15 +317,22 @@ int LogicBoard::gameHasEnded()
     return end;
 }
 
+bool LogicBoard::firstPhaseHasEnded()
+{
+    int pieces = 0;
+    for(int i=0;i<2;i++)
+    {
+        pieces += players->at(i)->getPiecesLeftToPut();
+    }
+    return pieces == 0;
+}
+
 std::vector<std::vector<int> > &LogicBoard::getAdjacencyMatrix()
 {
     return this->adjacency_matrix;
 }
 
-int *&LogicBoard::getBoard()
-{
-    return this->board;
-}
+
 
 int LogicBoard::getGamePhase()
 {
@@ -481,10 +482,7 @@ void LogicBoard::setPlayer(std::string type, int player_id)
     }
 }
 
-PlayerType &LogicBoard::getCurrentPlayerType()
-{
-    return players->at(turn-1)->getPlayerType();
-}
+
 
 std::vector<int> LogicBoard::getLegalPawnMoves(int player_id, int &pos)
 {

@@ -9,7 +9,14 @@ int AIPlayer::minMax(int *&board, int depth, Player *opponent, bool isMax, int &
 {
     if (depth == 0)
     {
-        return evaluateState(board, total_evaluated, opponent);
+        if(heuristic == "simple")
+            return evaluateStateSimple(total_evaluated, opponent);
+        else if (heuristic == "medium") {
+            return evaluateStateMedium(total_evaluated, opponent)  ;
+        }
+        else {
+            return evaluateState(board, total_evaluated, opponent);
+        }
     }
     total_evaluated++;
     if(logic_board->getGamePhase() == 0)
@@ -73,7 +80,7 @@ int AIPlayer::minMax(int *&board, int depth, Player *opponent, bool isMax, int &
         }
     }
     // game phase = 1 -> we are moving pieces
-    else {
+    else if (logic_board->getGamePhase() == 1){
         int res;
         if(isMax)
         {
@@ -138,6 +145,8 @@ int AIPlayer::minMax(int *&board, int depth, Player *opponent, bool isMax, int &
             return  best;
         }
     }
+    std::cout << "error\n";
+    return 0;
 }
 
 int AIPlayer::alphaBeta(int *&board, int depth, Player *opponent, bool isMax, int &total_evaluated, int alpha, int beta)
@@ -145,90 +154,158 @@ int AIPlayer::alphaBeta(int *&board, int depth, Player *opponent, bool isMax, in
     //return score for leaf node
     if(depth == 0)
     {
-        if(heuristic == "complex")
-        {
-            return evaluateState(board, total_evaluated, opponent);
-        }
+        if(heuristic == "simple")
+            return evaluateStateSimple(total_evaluated, opponent);
         else if (heuristic == "medium") {
-            //medium heuristic
+            return evaluateStateMedium(total_evaluated, opponent)  ;
         }
         else {
-            //simple heuristic
+            return evaluateState(board, total_evaluated, opponent);
         }
     }
+    total_evaluated++;
     if(logic_board->getGamePhase() == 0)
     {
-        total_evaluated++;
-        if(logic_board->getGamePhase() == 0)
+        std::vector<int> moves = logic_board->getLegalAdd();
+        if(isMax)
         {
-            std::vector<int> moves = logic_board->getLegalAdd();
-            if(isMax)
+            int best = -1000;
+            //for each available move
+            for(auto it = moves.begin(); it != moves.end(); it++)
             {
-                int best = -1000;
-                //for each available move
-                for(auto it = moves.begin(); it != moves.end(); it++)
+                int moveTo = *it;
+                logic_board->addPiece(moveTo, player_id);
+                int res;
+                if(logic_board->millFormedNoAction(player_id, moveTo))
                 {
-                    int moveTo = *it;
-                    logic_board->addPiece(moveTo, player_id);
-                    int res;
-                    if(logic_board->millFormedNoAction(player_id, moveTo))
+                    std::list<int> opponent_pawns = opponent->getPlayerPawns();
+                    int first_pos = *opponent_pawns.begin();
+                    logic_board->removePiece(first_pos);
+                    res = alphaBeta(board, depth-1, opponent, false
+                                 , total_evaluated, alpha, beta);
+                    logic_board->undoRemovePiece(first_pos, player_id, opponent->getPlayerId());
+                }
+                else {
+                    res = alphaBeta(board, depth-1, opponent, false
+                                 , total_evaluated, alpha, beta);
+                }
+                logic_board->undoAdd(moveTo, player_id);
+                if(res > best)
+                    best = res;
+                if(best>alpha)
+                    alpha = best;
+                if(beta <= alpha)
+                    break; //pruning, cut off
+            }
+            return best;
+        }
+        //isMin
+        else {
+            int best = 1000;
+            for(auto it = moves.begin(); it != moves.end(); it++)
+            {
+                int moveTo = *it;
+                int res;
+                logic_board->addPiece(moveTo, opponent->getPlayerId());
+                if(logic_board->millFormedNoAction(opponent->getPlayerId(), moveTo))
+                {
+                    std::list<int> opponent_pawns = getPlayerPawns();
+                    int first_pos = *opponent_pawns.begin();
+                    logic_board->removePiece(first_pos, opponent->getPlayerId(), player_id);
+                    res = alphaBeta(board, depth-1, opponent, true
+                                 , total_evaluated, alpha, beta);
+                    logic_board->undoRemovePiece(first_pos, opponent->getPlayerId(), player_id);
+                }
+                else {
+                    res = alphaBeta(board, depth-1, opponent, true,
+                                 total_evaluated, alpha, beta);
+                }
+                logic_board->undoAdd(moveTo, opponent->getPlayerId());
+                if(res < best)
+                    best=res;
+                if(best < beta)
+                    beta = best;
+                if(beta <= alpha)
+                    break; //pruning, cut off
+            }
+            return best;
+        }
+    }
+
+    else if (logic_board->getGamePhase() == 1) {
+        int res;
+        if(isMax)
+        {
+            int best = -1000;
+            std::map<int, std::vector<int>> moves = logic_board->getLegalMoves(player_id);
+            for(auto it = moves.begin(); it != moves.end(); it++)
+            {
+                int move_from = it->first;
+                std::vector<int> sub_moves = it->second;
+                for(auto &move_to: sub_moves)
+                {
+                    logic_board->movePiece(move_from, move_to, player_id);
+                    if(logic_board->millFormedNoAction(player_id, move_to))
                     {
-                        std::list<int> opponent_pawns = opponent->getPlayerPawns();
-                        int first_pos = *opponent_pawns.begin();
-                        logic_board->removePiece(first_pos);
-                        res = minMax(board, depth-1, opponent, false
-                                     , total_evaluated);
-                        logic_board->undoRemovePiece(first_pos, player_id, opponent->getPlayerId());
+                        std::list<int>opponent_pawns = opponent->getPlayerPawns();
+                        int to_remove = *opponent_pawns.begin();
+                        logic_board->removePiece(to_remove, player_id, opponent->getPlayerId());
+                        res = alphaBeta(board, depth-1, opponent, false, total_evaluated, alpha, beta);
+                        logic_board->undoRemovePiece(to_remove, player_id, opponent->getPlayerId());
                     }
                     else {
-                        res = minMax(board, depth-1, opponent, false
-                                     , total_evaluated);
+                        res = alphaBeta(board, depth-1, opponent, false, total_evaluated, alpha, beta);
                     }
-                    logic_board->undoAdd(moveTo, player_id);
+                    logic_board->undoMovePiece(move_from, move_to, player_id);
                     if(res > best)
                         best = res;
                     if(best>alpha)
                         alpha = best;
                     if(beta <= alpha)
-                        break;
+                        break;  //pruning, cut off
                 }
-                return best;
             }
-            //isMin
-            else {
-                int best = 1000;
-                for(auto it = moves.begin(); it != moves.end(); it++)
+            return best;
+        }
+        //isMin
+        else {
+            int best = 1000;
+            std::map<int, std::vector<int>> moves = logic_board->getLegalMoves(opponent->getPlayerId());
+            for(auto it = moves.begin(); it != moves.end(); it++)
+            {
+                int move_from = it->first;
+                std::vector<int> sub_moves = it->second;
+                for(auto &move_to: sub_moves)
                 {
-                    int moveTo = *it;
-                    int res;
-                    logic_board->addPiece(moveTo, opponent->getPlayerId());
-                    if(logic_board->millFormedNoAction(opponent->getPlayerId(), moveTo))
+                    logic_board->movePiece(move_from, move_to, opponent->getPlayerId());
+                    if(logic_board->millFormedNoAction(opponent->getPlayerId(), move_to))
                     {
-                        std::list<int> opponent_pawns = getPlayerPawns();
-                        int first_pos = *opponent_pawns.begin();
-                        logic_board->removePiece(first_pos, opponent->getPlayerId(), player_id);
-                        res = minMax(board, depth-1, opponent, true
-                                     , total_evaluated);
-                        logic_board->undoRemovePiece(first_pos, opponent->getPlayerId(), player_id);
+                        std::list<int>opponent_pawns = getPlayerPawns();
+                        int to_remove = *opponent_pawns.begin();
+                        logic_board->removePiece(to_remove, opponent->getPlayerId(), player_id);
+                        res = alphaBeta(board, depth-1, opponent, true, total_evaluated, alpha, beta);
+                        logic_board->undoRemovePiece(to_remove, opponent->getPlayerId(), player_id);
                     }
                     else {
-                        res = minMax(board, depth-1, opponent, true,
-                                     total_evaluated);
+                        res = alphaBeta(board, depth-1, opponent, true, total_evaluated, alpha, beta);
                     }
-                    logic_board->undoAdd(moveTo, opponent->getPlayerId());
+                    logic_board->undoMovePiece(move_from, move_to, opponent->getPlayerId());
                     if(res < best)
-                        best=res;
+                        best = res;
                     if(best < beta)
                         beta = best;
                     if(beta <= alpha)
-                        break;
+                        break; //pruning, cut off
                 }
-                return best;
             }
+            return  best;
         }
     }
-    std::cout <<"error\n";
-    return 0;//error
+    // TODO error logging
+    else {
+        std::cout << "error\n";
+        return 0;
+    }
 }
 
 int AIPlayer::getBestAdd(int *&board, Player *opponent)
@@ -272,7 +349,6 @@ int AIPlayer::getBestAddMiniMax(int *&board, Player *opponent)
         }
     }
     return best_add;
-
 }
 
 int AIPlayer::getBestAddAlphaBeta(int *&board, Player *opponent)
@@ -280,8 +356,8 @@ int AIPlayer::getBestAddAlphaBeta(int *&board, Player *opponent)
     int total_evaluated = 0;
     int res;
     int best_score = -1000;
-    int alpha = -1000;
-    int beta = 1000;
+    int alpha = -10000;
+    int beta = 10000;
     std::vector<int> moves = logic_board->getLegalAdd();
     int best_add = *moves.begin();
     for(auto it = moves.begin(); it != moves.end(); it++)
@@ -311,6 +387,17 @@ int AIPlayer::getBestAddAlphaBeta(int *&board, Player *opponent)
 
 std::pair<int, int> AIPlayer::getBestMove(int *&board, Player *opponent)
 {
+    if(algorithm == "MiniMax")
+        return getBestMoveMiniMax(board, opponent, DEPTH);
+    else {
+        return getBestMoveAlphaBeta(board, opponent, DEPTH);
+    }
+}
+
+std::pair<int, int> AIPlayer::getBestMoveMiniMax(int *&board, Player *opponent, int depth)
+{
+//    if(getNumberOfPieces() == 3)
+//        depth=-2;
     int total_evaluated = 0;
     int res;
     int best_score = -1000;
@@ -329,11 +416,61 @@ std::pair<int, int> AIPlayer::getBestMove(int *&board, Player *opponent)
                 std::list<int>opponent_pawns = opponent->getPlayerPawns();
                 int to_remove = *opponent_pawns.begin();
                 logic_board->removePiece(to_remove, player_id, opponent->getPlayerId());
-                res = minMax(board, DEPTH, opponent, false, total_evaluated);
+                res = minMax(board, depth, opponent, false, total_evaluated);
                 logic_board->undoRemovePiece(to_remove, player_id, opponent->getPlayerId());
             }
             else {
-                res = minMax(board, DEPTH, opponent, false, total_evaluated);
+                res = minMax(board, depth, opponent, false, total_evaluated);
+            }
+            logic_board->undoMovePiece(move_from, move_to, player_id);
+            if(res > best_score)
+            {
+                best_score = res;
+                best_move={move_from, move_to};
+            }
+        }
+    }
+    return best_move;
+}
+
+std::pair<int, int> AIPlayer::getBestMoveAlphaBeta(int *&board, Player *opponent, int depth)
+{
+
+    int total_evaluated = 0;
+    int res;
+    int alpha = -1000;
+    int beta = 1000;
+    int best_score = -1000;
+    std::map<int, std::vector<int>> moves = logic_board->getLegalMoves(player_id);
+    std::pair<int, int>best_move;
+
+    for(auto &it: moves)
+    {
+        int move_from = it.first;
+        std::vector<int> sub_moves = it.second;
+        for(auto &move_to: sub_moves)
+        {
+            logic_board->movePiece(move_from, move_to, player_id);
+            if(logic_board->millFormedNoAction(player_id, move_to))
+            {
+                std::list<int>opponent_pawns = opponent->getPlayerPawns();
+                int to_remove = *opponent_pawns.begin();
+                logic_board->removePiece(to_remove, player_id, opponent->getPlayerId());
+                if(getNumberOfPieces() == 3)
+                    res = alphaBeta(board, depth-2, opponent, false, total_evaluated, alpha, beta);
+                else {
+                    res = alphaBeta(board, depth, opponent, false, total_evaluated, alpha, beta);
+
+                }
+                logic_board->undoRemovePiece(to_remove, player_id, opponent->getPlayerId());
+            }
+            else {
+                if(getNumberOfPieces() == 3)
+                    res = alphaBeta(board, depth-2, opponent, false, total_evaluated, alpha, beta);
+                else {
+                    res = alphaBeta(board, depth, opponent, false, total_evaluated, alpha, beta);
+
+                }
             }
             logic_board->undoMovePiece(move_from, move_to, player_id);
             if(res > best_score)
@@ -368,39 +505,16 @@ void AIPlayer::setAlgorithm(std::string algorithm)
     this->algorithm=algorithm;
 }
 
-int AIPlayer::evaluateStateSimple(int *board, int &total_evaluated)
+int AIPlayer::evaluateStateSimple(int &total_evaluated, Player *opponent)
 {
     total_evaluated++;
-    int own_pawns=0;
-    int opponent_pawns=0;
-    //board size = 24
-    for(int i=0;i<24;i++)
-    {
-        if(board[i] == player_id)
-            own_pawns++;
-        else if(board[i] == 0){
-
-        }
-        else {
-            opponent_pawns++;
-        }
-    }
-    return own_pawns-opponent_pawns;
-
-
+    return getNumberOfPieces() - opponent->getNumberOfPieces();
 }
 
-int AIPlayer::evaluateStateSimple2(int *board, int &total_evaluated, Player *opponent)
+int AIPlayer::evaluateStateMedium(int &total_evaluated, Player *opponent)
 {
-    //number of captured pawns my actual player - captured by opponent / all captured pawns
     total_evaluated++;
-    int all_captured = getCapturedPawnsCount() + opponent->getCapturedPawnsCount();
-    if(all_captured == 0)
-        return 0;
-    else {
-        return ((getCapturedPawnsCount() - opponent->getCapturedPawnsCount()) /
-                getCapturedPawnsCount() + opponent->getCapturedPawnsCount());
-    }
+    return getNumberOfPieces() - opponent->getNumberOfPieces() + getMillsCount() - opponent->getMillsCount();
 
 }
 
@@ -427,7 +541,7 @@ int AIPlayer::evaluateState(int *&board, int &total_evaluated, Player *opponent)
         if(logic_board->getLegalPawnMoves(opponent->getPlayerId(), pos).size() == 0)
             opponent_blocked++;
     }
-    return ((2*own_pawns_on_board) - (2*opponent_pawns_on_board) + (4*my_mills) - (4*opponent_mills)
+    return ((2*own_pawns_on_board) - (2*opponent_pawns_on_board) + (3*my_mills) - (3*opponent_mills)
             - own_blocked + opponent_blocked + own_close_to_mill - opponent_close_to_mill);
 }
 

@@ -18,7 +18,6 @@ class AIPlayer : public Player
 {
 public:
     AIPlayer();
-
     int minMax(int *&board, int depth, Player *opponent, bool isMax,
                int &total_evaluated);
     int alphaBeta(int *&board, int depth, Player *opponent, bool isMax,
@@ -28,9 +27,10 @@ public:
     int getBestAddAlphaBeta(int *&board, Player *opponent);
     // pair<from, to>
     std::pair<int, int> getBestMove(int *&board, Player *opponent);
+    std::pair<int, int> getBestMoveMiniMax(int *&board, Player *opponent, int depth);
+    std::pair<int, int> getBestMoveAlphaBeta(int *&board, Player *opponent, int depth);
 
     //getters, setters
-
     void setLogicBoard(LogicBoard *&logic_board);
     void setLogicBoard(std::shared_ptr<LogicBoard> logic_board);
     void setHeuristic(std::string heuristic);
@@ -42,10 +42,10 @@ public:
     std::shared_ptr<LogicBoard>logic_board;
 
     //heuristic = own pawn - opponent pawns on board
-    int evaluateStateSimple(int *board, int &total_evaluated);
+    int evaluateStateSimple(int &total_evaluated, Player *opponent);
 
     //heuristic = captured pawns - captured pawns by opponent / all captured pawns
-    int evaluateStateSimple2(int *board, int &total_evaluated, Player *opponent);
+    int evaluateStateMedium(int &total_evaluated, Player *opponent);
 
     //
     int evaluateState(int *&board, int &total_evaluated, Player *opponent);
