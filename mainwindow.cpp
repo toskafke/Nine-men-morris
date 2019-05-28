@@ -8,6 +8,8 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->setupUi(this);
     logic_board = new LogicBoard();
     board = new GraphicBoard();
+
+
     board->setLogicBoard(logic_board);
     setWindowTitle(tr("Nine Men's Morris"));
     this->setCentralWidget(board);
