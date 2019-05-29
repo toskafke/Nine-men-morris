@@ -6,6 +6,7 @@
 #include <player.h>
 #include <array>
 #include <vector>
+#include <chrono>
 
 #include <logicboard.h>
 
@@ -35,6 +36,11 @@ public:
     void setLogicBoard(std::shared_ptr<LogicBoard> logic_board);
     void setHeuristic(std::string heuristic);
     void setAlgorithm(std::string algorithm);
+    std::string getHeuristic();
+    std::string getAlgorithm();
+    std::vector<std::array<int, 6>> getGameplayData();
+
+
 
 
 //private:
@@ -52,6 +58,11 @@ public:
 
     std::string heuristic;
     std::string algorithm;
+
+    // array of <game_phase, pawns_count, turn, time for getting piece, total_evaluated, depth>
+    // TODO fill during gameplay
+    std::vector<std::array<int, 6>> gameplay_data;
+
 
 };
 

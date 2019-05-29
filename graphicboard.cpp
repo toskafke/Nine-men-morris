@@ -571,7 +571,8 @@ void GraphicBoard::movePieceOnBoard(int &moveFrom, const int &pos)
 
 void GraphicBoard::pointSelected(int pos)
 {
-    PlayerType player_type = logic_board->getCurrentPlayerType();
+    PlayerType player_type = logic_board->getActualPlayerType();
+    int game_ended = -1;
     int game_phase = logic_board->getGamePhase();
     int turn = logic_board->getPlayerTurn();
     bool mill_just_formed = logic_board->getMillJustFormed();
@@ -598,13 +599,17 @@ void GraphicBoard::pointSelected(int pos)
                 //all pawn on the board
             case 1:
                 movePiece(moveFrom, pos, turn);
-                if(logic_board->gameHasEnded() == PLAYER1_ID)
+                game_ended = logic_board->gameHasEnded();
+                if(game_ended == PLAYER1_ID)
                 {
                     endGame(PLAYER1_ID);
                 }
-                else if(logic_board->gameHasEnded() == PLAYER2_ID)
+                else if(game_ended == PLAYER2_ID)
                 {
                     endGame(PLAYER2_ID);
+                }
+                else if (game_ended == 0) {
+                    endGame(0);
                 }
                 break;
             }
@@ -612,7 +617,7 @@ void GraphicBoard::pointSelected(int pos)
         updateTurnLabel(logic_board->getTurnCounter());
     }
     //player is computer
-    if(logic_board->getActualPlayerType() == Computer)
+    if(logic_board->getActualPlayerType() == Computer && game_ended == -1)
     {
         game_phase=logic_board->getGamePhase();
         switch(game_phase){
@@ -665,13 +670,24 @@ void GraphicBoard::pointSelected(int pos)
             }
             logic_board->incrementTurn();
             setMoveHoverStylesheet();
-            if(logic_board->gameHasEnded() == PLAYER1_ID)
+            game_ended = logic_board->gameHasEnded();
+
+            if(game_ended == PLAYER1_ID)
             {
+                showErrorMessage(tr("1"));
                 endGame(PLAYER1_ID);
             }
-            else if(logic_board->gameHasEnded() == PLAYER2_ID)
+            else if(game_ended == PLAYER2_ID)
             {
+                showErrorMessage(tr("2"));
                 endGame(PLAYER2_ID);
+
+            }
+            else if(game_ended == 0)
+            {
+                showErrorMessage(tr("0"));
+                endGame(0);
+
             }
             break;
         }
@@ -679,8 +695,8 @@ void GraphicBoard::pointSelected(int pos)
         updateTurnLabel(logic_board->getTurnCounter());
         timeHandler();
         // next turn
-        if(logic_board->getActualPlayerType() == Computer)
-              pointSelected(0);
+        if(logic_board->getActualPlayerType() == Computer && game_ended == -1)
+            pointSelected(0);
     }
 }
 
@@ -701,6 +717,8 @@ void GraphicBoard::endGame(const int &losing_player_id)
         updateStatusLabel(tr("Player 1 has won the game! Congrats."));
 
     } break;
+    case 0:
+        updateStatusLabel(tr("It's a tie!"));
     }
 
     // Disable all buttons
@@ -715,35 +733,34 @@ void GraphicBoard::endGame(const int &losing_player_id)
     heuristicSelect->setEnabled(true);
     heuristicSelect2->setEnabled(true);
     startButton->setEnabled(true);
-    setPlaceHoverStylesheet();
-
     logic_board->endGame();
 }
 void GraphicBoard::resetGame()
 {
     // Enable and reset all buttons
-      for(int i = 0; i < 24; i++)
-      {
+    for(int i = 0; i < 24; i++)
+    {
         buttons[i]->setObjectName("empty");
-      }
+    }
 
-      // Reset attributes
-      //todo reset logic board
-//      logic_board->reset();
 
-      // Reset players
-//      aiPlayer->reset();
-//      humanPlayer->reset();
+    // Reset attributes
+    //todo reset logic board
+    //      logic_board->reset();
 
-      // Reset status list
-      statusList->clear();
-      statusList->addItem(tr("A new game has started."));
+    // Reset players
+    //      aiPlayer->reset();
+    //      humanPlayer->reset();
 
-      // Reset labels
-      updateTurnLabel(0);
+    // Reset status list
+    statusList->clear();
+    statusList->addItem(tr("A new game has started."));
 
-      // Reset stylesheet
-      setPlaceHoverStylesheet();
+    // Reset labels
+    updateTurnLabel(0);
+
+    // Reset stylesheet
+    setPlaceHoverStylesheet();
 }
 
 

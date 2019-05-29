@@ -12,6 +12,8 @@
 #include <algorithm>
 #include <memory>
 #include <map>
+#include <fstream>
+#include <unistd.h>
 
 //#define PLAYER1_ID 1
 //#define PLAYER2_ID 2
@@ -39,6 +41,7 @@ public:
     void addPlayer(Player *&player);
     void endGame();
 
+
     // checking bool methods
     bool millIsBroken(int &move_from, int &pos);
     bool millIsBroken(int &move_from, int &pos, int &player_id);
@@ -58,8 +61,10 @@ public:
     int getBestAdd();
     std::pair<int, int> getBestMove();
 
-    //getters, setters
+    //other
+    void playerDataToFile();
 
+    //getters, setters
     int getPlayerTurn();
     int getOpponentTurn();
     int getPiecesLeft(int turn);
@@ -82,6 +87,7 @@ public:
 
 private:
     int turn;
+    int last_mill;
     int game_phase;
     int turn_counter;
     int *board;

@@ -4,6 +4,7 @@
 LogicBoard::LogicBoard()
 {
     inicializeBoard();
+    last_mill = 0;
     turn_counter = 0;
     turn = PLAYER1_ID;
     game_phase=0;
@@ -54,6 +55,7 @@ bool LogicBoard::millFormed(int pos)
             if(pos1 == pos || pos2 == pos || pos3 == pos)
             {
                 mill_formed=true;
+                last_mill = turn_counter;
                 mill_just_formed=true;
                 players->at(turn-1)->addPawnsToMill(pos1, pos2, pos3);
 
@@ -181,6 +183,45 @@ void LogicBoard::endGame()
     turn_counter = 0;
     game_phase = 0;
     mill_just_formed = false;
+}
+
+void LogicBoard::playerDataToFile()
+{
+   std::cout << "printing data to file\n";
+   usleep(5000);
+    for (int i=0;i < 2;i++) {
+        if(players->at(i)->getPlayerType() == Computer)
+        {
+            std::ofstream myfile;
+            std::string filename = "player_data"+std::to_string(i)+".csv";
+            myfile.open(filename.c_str());
+            AIPlayer *player = dynamic_cast<AIPlayer*>(players->at(i));
+            std::string line ="";
+            line = "PLAYER_ID, " + std::to_string(player->getPlayerId())+"\n";
+            myfile << line;
+            line = "PLAYER_TYPE, "+ std::to_string(player->getPlayerType())+"\n";
+            myfile << line;
+            line = "HEURISTIC, "+ player->getHeuristic()+"\n";
+            myfile << line;
+            line = "ALGORITHM, "+ player->getAlgorithm()+"\n";
+            myfile << line;
+            line = "nr, game phase, pawns count, turn, time, total evaluated, depth\n";
+            myfile << line;
+            std::vector<std::array<int, 6>> player_data = player->getGameplayData();
+            for (int i = 0; i < player_data.size(); i++)
+            {
+                line = std::to_string(i) + ", ";
+                for (int j = 0; j < player_data.at(i).size(); j++)
+                {
+                    line += std::to_string(player_data.at(i).at(j));
+                    line += ", ";
+                }
+                line += "\n";
+                myfile << line;
+            }
+            myfile.close();
+        }
+    }
 }
 
 bool LogicBoard::millIsBroken(int &move_from, int &pos)
@@ -314,6 +355,10 @@ int LogicBoard::gameHasEnded()
         end=PLAYER1_ID;
     else if(player2->getPlayerPawns().size() < 3 || !hasLegalMove(player2))
         end=PLAYER2_ID;
+    else if(turn - last_mill > 40)
+        end = 0;
+    if(end != -1)
+        playerDataToFile();
     return end;
 }
 

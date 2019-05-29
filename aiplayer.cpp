@@ -324,6 +324,7 @@ int AIPlayer::getBestAddMiniMax(int *&board, Player *opponent)
     int total_evaluated = 0;
     int res;
     int best_score = -1000;
+    std::chrono::high_resolution_clock::time_point t1 = std::chrono::high_resolution_clock::now();
     std::vector<int> moves = logic_board->getLegalAdd();
     int best_add = *moves.begin();
     for(auto it = moves.begin(); it != moves.end(); it++)
@@ -348,6 +349,10 @@ int AIPlayer::getBestAddMiniMax(int *&board, Player *opponent)
             best_add = pos;
         }
     }
+    std::chrono::high_resolution_clock::time_point t2 = std::chrono::high_resolution_clock::now();
+    int duration = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count();
+    gameplay_data.push_back(std::array<int, 6>{logic_board->getGamePhase(), getNumberOfPieces(),
+                                               logic_board->getTurnCounter(), duration, total_evaluated, DEPTH});
     return best_add;
 }
 
@@ -358,6 +363,7 @@ int AIPlayer::getBestAddAlphaBeta(int *&board, Player *opponent)
     int best_score = -1000;
     int alpha = -10000;
     int beta = 10000;
+    std::chrono::high_resolution_clock::time_point t1 = std::chrono::high_resolution_clock::now();
     std::vector<int> moves = logic_board->getLegalAdd();
     int best_add = *moves.begin();
     for(auto it = moves.begin(); it != moves.end(); it++)
@@ -382,6 +388,10 @@ int AIPlayer::getBestAddAlphaBeta(int *&board, Player *opponent)
             best_add = pos;
         }
     }
+    std::chrono::high_resolution_clock::time_point t2 = std::chrono::high_resolution_clock::now();
+    int duration = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count();
+    gameplay_data.push_back(std::array<int, 6>{logic_board->getGamePhase(), getNumberOfPieces(),
+                                               logic_board->getTurnCounter(), duration, total_evaluated, DEPTH});
     return best_add;
 }
 
@@ -396,11 +406,11 @@ std::pair<int, int> AIPlayer::getBestMove(int *&board, Player *opponent)
 
 std::pair<int, int> AIPlayer::getBestMoveMiniMax(int *&board, Player *opponent, int depth)
 {
-//    if(getNumberOfPieces() == 3)
-//        depth=-2;
     int total_evaluated = 0;
     int res;
     int best_score = -1000;
+    std::chrono::high_resolution_clock::time_point t1 = std::chrono::high_resolution_clock::now();
+
     std::map<int, std::vector<int>> moves = logic_board->getLegalMoves(player_id);
     std::pair<int, int>best_move;
 
@@ -430,6 +440,10 @@ std::pair<int, int> AIPlayer::getBestMoveMiniMax(int *&board, Player *opponent, 
             }
         }
     }
+    std::chrono::high_resolution_clock::time_point t2 = std::chrono::high_resolution_clock::now();
+    int duration = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count();
+    gameplay_data.push_back(std::array<int, 6>{logic_board->getGamePhase(), getNumberOfPieces(),
+                                               logic_board->getTurnCounter(), duration, total_evaluated, DEPTH});
     return best_move;
 }
 
@@ -441,6 +455,8 @@ std::pair<int, int> AIPlayer::getBestMoveAlphaBeta(int *&board, Player *opponent
     int alpha = -1000;
     int beta = 1000;
     int best_score = -1000;
+    std::chrono::high_resolution_clock::time_point t1 = std::chrono::high_resolution_clock::now();
+
     std::map<int, std::vector<int>> moves = logic_board->getLegalMoves(player_id);
     std::pair<int, int>best_move;
 
@@ -480,6 +496,10 @@ std::pair<int, int> AIPlayer::getBestMoveAlphaBeta(int *&board, Player *opponent
             }
         }
     }
+    std::chrono::high_resolution_clock::time_point t2 = std::chrono::high_resolution_clock::now();
+    int duration = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count();
+    gameplay_data.push_back(std::array<int, 6>{logic_board->getGamePhase(), getNumberOfPieces(),
+                                               logic_board->getTurnCounter(), duration, total_evaluated, DEPTH});
     return best_move;
 }
 
@@ -503,6 +523,21 @@ void AIPlayer::setHeuristic(std::string heuristic)
 void AIPlayer::setAlgorithm(std::string algorithm)
 {
     this->algorithm=algorithm;
+}
+
+std::string AIPlayer::getHeuristic()
+{
+    return heuristic;
+}
+
+std::string AIPlayer::getAlgorithm()
+{
+    return algorithm;
+}
+
+std::vector<std::array<int, 6> > AIPlayer::getGameplayData()
+{
+    return gameplay_data;
 }
 
 int AIPlayer::evaluateStateSimple(int &total_evaluated, Player *opponent)

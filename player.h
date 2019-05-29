@@ -53,9 +53,6 @@ protected:
     std::array<std::array<int, 3>, 16> possibleMillPositions;
     std::vector<std::vector<int>> adjacency_matrix;
 
-    // array of <game_phase, pawns_count, turn, time for getting piece, total_evaluated>
-    // TODO fill during gameplay
-    std::vector<std::array<int, 5>> gameplay_data;
 
 private:
 
